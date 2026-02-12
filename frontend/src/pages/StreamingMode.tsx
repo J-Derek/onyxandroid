@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePlayback, Track as PlayerTrack } from "@/contexts/PlaybackContext";
 import { useCache } from "@/contexts/CacheContext";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {
     DropdownMenu,
