@@ -339,7 +339,7 @@ export default function NowPlaying({ onClose, isTab = false }: NowPlayingProps) 
             </div>
 
             {/* Main Player - Responsive width for large screens */}
-            <div className={`relative flex-1 flex flex-col p-6 mx-auto w-full max-w-lg lg:max-w-xl xl:max-w-2xl overflow-y-auto ${showQueue ? "opacity-30 lg:opacity-100" : ""}`}>
+            <div className={`relative flex-1 flex flex-col p-6 mx-auto w-full max-w-lg lg:max-w-xl xl:max-w-2xl overflow-y-auto scrollbar-hide ${showQueue ? "opacity-30 lg:opacity-100" : ""}`}>
                 {/* Header */}
                 <header className="flex items-center justify-between mb-6">
                     {!isTab && (
@@ -701,7 +701,7 @@ function QueueList({
     // 🚀 SKELETON UI: Show placeholders while loading
     if (isQueueLoading && upNextTracks.length === 0) {
         return (
-            <div className="flex-1 overflow-y-auto p-2 queue-scrollbar">
+            <div className="flex-1 overflow-y-auto p-2 scrollbar-hide">
                 {Array(5).fill(0).map((_, i) => (
                     <div key={i} className="flex items-center gap-3 p-2 rounded-lg mb-1 animate-pulse">
                         <div className="w-10 h-10 rounded bg-white/10" />
@@ -717,7 +717,7 @@ function QueueList({
 
     if (upNextTracks.length === 0) {
         return (
-            <div className="flex-1 overflow-y-auto p-2 queue-scrollbar">
+            <div className="flex-1 overflow-y-auto p-2 scrollbar-hide">
                 <div className="text-center py-10 text-muted-foreground">
                     <ListMusic className="w-10 h-10 mx-auto mb-2 opacity-30" />
                     <p className="text-sm">No tracks in queue</p>
@@ -728,7 +728,7 @@ function QueueList({
     }
 
     return (
-        <div className="flex-1 overflow-y-auto p-2 queue-scrollbar">
+        <div className="flex-1 overflow-y-auto p-2 scrollbar-hide">
             <DndContext
                 sensors={sensors}
                 collisionDetection={closestCenter}

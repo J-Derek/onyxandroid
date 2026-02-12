@@ -459,3 +459,17 @@
     transform: translateX(100%);
   }
 }
+
+/* Utility to hide scrollbars but keep functionality */
+@layer utilities {
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    /* IE and Edge */
+    scrollbar-width: none;
+    /* Firefox */
+  }
+}
