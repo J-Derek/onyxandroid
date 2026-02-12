@@ -26,8 +26,9 @@ COPY backend/ ./backend/
 # Copy Built Frontend from Stage 1
 COPY --from=frontend-build /app/frontend/dist ./frontend/dist
 
-# Expose Port
+# Expose Port (Mostly for documentation)
 EXPOSE 8000
 
 # Run Application
-CMD ["uvicorn", "backend.app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Use PORT environment variable if set (Render/Fly.io) or default to 8000
+CMD ["sh", "-c", "uvicorn backend.app.main:app --host 0.0.0.0 --port ${PORT:-8000} --forwarded-allow-ips='*'"]
