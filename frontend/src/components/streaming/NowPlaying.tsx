@@ -339,7 +339,7 @@ export default function NowPlaying({ onClose, isTab = false }: NowPlayingProps) 
             </div>
 
             {/* Main Player - Responsive width for large screens */}
-            <div className={`relative flex-1 flex flex-col p-6 mx-auto w-full max-w-lg lg:max-w-xl xl:max-w-2xl overflow-y-auto scrollbar-hide ${showQueue ? "opacity-30 lg:opacity-100" : ""}`}>
+            <div className={`relative flex-1 flex flex-col p-6 mx-auto w-full max-w-lg lg:max-w-3xl xl:max-w-4xl overflow-y-auto scrollbar-hide ${showQueue ? "opacity-30 lg:opacity-100" : ""}`}>
                 {/* Header */}
                 <header className="flex items-center justify-between mb-6">
                     {!isTab && (
@@ -396,7 +396,7 @@ export default function NowPlaying({ onClose, isTab = false }: NowPlayingProps) 
 
 
                 {/* Artwork */}
-                <div className="aspect-square w-full max-w-sm mx-auto mb-6 group relative">
+                <div className="aspect-square w-full max-w-sm lg:max-w-md xl:max-w-lg mx-auto mb-8 lg:mb-12 group relative">
                     <motion.div
                         layoutId="artwork"
                         className="w-full h-full rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden bg-white/5 relative z-10"
@@ -414,10 +414,10 @@ export default function NowPlaying({ onClose, isTab = false }: NowPlayingProps) 
                 </div>
 
                 {/* Track Info */}
-                <div className="mb-4 flex items-end justify-between gap-4">
+                <div className="mb-6 flex items-end justify-between gap-4">
                     <div className="min-w-0 flex-1">
-                        <h2 className="text-2xl font-bold truncate mb-1">{currentTrack.title}</h2>
-                        <p className={`text-lg font-medium truncate ${theme.text}`}>{currentTrack.artist}</p>
+                        <h2 className="text-2xl lg:text-3xl xl:text-4xl font-bold truncate mb-1">{currentTrack.title}</h2>
+                        <p className={`text-lg lg:text-xl font-medium truncate ${theme.text}`}>{currentTrack.artist}</p>
                     </div>
 
 
@@ -457,8 +457,8 @@ export default function NowPlaying({ onClose, isTab = false }: NowPlayingProps) 
                 </div>
 
                 {/* Audio Visualizer - dedicated row */}
-                <div className="h-12 w-full mb-6 opacity-40 hover:opacity-100 transition-opacity">
-                    <AudioVisualizer barCount={64} />
+                <div className="h-12 lg:h-16 xl:h-20 w-full mb-8 lg:mb-12 opacity-40 hover:opacity-100 transition-opacity">
+                    <AudioVisualizer barCount={showQueue ? 48 : 96} />
                 </div>
 
                 {/* Progress */}
