@@ -20,8 +20,8 @@ tmux kill-session -t onyx 2>/dev/null
 # 5. Start Uvicorn in tmux (Background)
 # --host 0.0.0.0: Expose to Wi-Fi
 # --workers 1: Save battery/RAM on mobile
-# PYTHONUNBUFFERED=1: Ensure logs show up in tmux
-tmux new-session -d -s onyx "cd ~/onyx-main/backend && PYTHONUNBUFFERED=1 uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 1"
+# We activate the .venv first to make sure all libraries are used
+tmux new-session -d -s onyx "cd ~/onyx-main/backend && source .venv/bin/activate && pip install -U yt-dlp && PYTHONUNBUFFERED=1 uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 1"
 
 # 6. Success Toast
 termux-toast "Onyx Server started at http://$LOCAL_IP:8000"
