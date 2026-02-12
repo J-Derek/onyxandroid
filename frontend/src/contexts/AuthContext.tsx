@@ -156,6 +156,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         localStorage.removeItem("onyx_active_profile");
         localStorage.removeItem("onyx_last_played");
         localStorage.removeItem("onyx_crossfade");
+        localStorage.removeItem("onyx_unlocked_profiles");
 
         // Dispatch event to notify all contexts to reset their state
         window.dispatchEvent(new CustomEvent("onyx-user-changed"));

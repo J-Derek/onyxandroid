@@ -4,12 +4,12 @@
  */
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Edit2, X, User as UserIcon, Lock, Loader2 } from "lucide-react";
+import { Plus, Edit2, X, User as UserIcon, Lock, Loader2, ShieldOff, Settings2, CheckSquare, Square } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
-import { createProfile, verifyProfilePin, Profile } from "@/lib/auth";
+import { createProfile, verifyProfilePin, setProfilePin, removeProfilePin, Profile } from "@/lib/auth";
 import { toast } from "sonner";
 
 const AVATAR_COLORS = [
@@ -31,9 +31,25 @@ export default function ProfileSelector() {
     const [pinProfile, setPinProfile] = useState<Profile | null>(null);
     const [pinInput, setPinInput] = useState("");
     const [isVerifyingPin, setIsVerifyingPin] = useState(false);
+    const [stayUnlocked, setStayUnlocked] = useState(false);
+    const [isManageMode, setIsManageMode] = useState(false);
+    const [editingProfile, setEditingProfile] = useState<Profile | null>(null);
+
+    // Get persisted unlocked state
+    const getUnlockedProfiles = (): number[] => {
+        try {
+            return JSON.parse(localStorage.getItem("onyx_unlocked_profiles") || "[]");
+        } catch { return []; }
+    };
 
     const handleProfileClick = async (profile: Profile) => {
-        if (profile.has_pin) {
+        if (isManageMode) {
+            setEditingProfile(profile);
+            return;
+        }
+
+        const unlockedIds = getUnlockedProfiles();
+        if (profile.has_pin && !unlockedIds.includes(profile.id)) {
             setPinProfile(profile);
             setPinInput("");
         } else {
@@ -49,6 +65,12 @@ export default function ProfileSelector() {
         try {
             const valid = await verifyProfilePin(pinProfile.id, pinInput);
             if (valid) {
+                if (stayUnlocked) {
+                    const current = getUnlockedProfiles();
+                    if (!current.includes(pinProfile.id)) {
+                        localStorage.setItem("onyx_unlocked_profiles", JSON.stringify([...current, pinProfile.id]));
+                    }
+                }
                 selectProfile(pinProfile);
                 navigate("/streaming/home");
             } else {
@@ -140,12 +162,17 @@ export default function ProfileSelector() {
                                 profile.name.charAt(0).toUpperCase()
                             )}
                             {profile.has_pin && (
-                                <div className="absolute bottom-1 right-1 w-5 h-5 rounded-full bg-black/60 flex items-center justify-center">
-                                    <Lock className="w-3 h-3" />
+                                <div className="absolute bottom-1 right-1 w-5 h-5 rounded-full bg-black/60 backdrop-blur-md flex items-center justify-center border border-white/10">
+                                    <Lock className={`w-2.5 h-2.5 ${getUnlockedProfiles().includes(profile.id) ? "text-green-400" : "text-white/60"}`} />
+                                </div>
+                            )}
+                            {isManageMode && (
+                                <div className="absolute inset-0 bg-black/40 flex items-center justify-center rounded-2xl">
+                                    <Edit2 className="w-8 h-8 text-white drop-shadow-lg" />
                                 </div>
                             )}
                         </div>
-                        <span className="font-medium">{profile.name}</span>
+                        <span className="font-medium group-hover:text-primary transition-colors">{profile.name}</span>
                     </motion.button>
                 ))}
 
@@ -175,6 +202,16 @@ export default function ProfileSelector() {
                 transition={{ delay: 0.5 }}
                 className="mt-12 flex gap-4"
             >
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setIsManageMode(!isManageMode)}
+                    className={isManageMode ? "text-primary bg-primary/10 border-primary/20" : ""}
+                >
+                    <Settings2 className="w-4 h-4 mr-2" />
+                    {isManageMode ? "Done Managing" : "Manage Profiles"}
+                </Button>
+                <div className="w-px h-8 bg-white/5 mx-2" />
                 <Button variant="ghost" size="sm" onClick={() => navigate("/")}>
                     Back to Mode Switcher
                 </Button>
@@ -182,7 +219,7 @@ export default function ProfileSelector() {
                     variant="ghost"
                     size="sm"
                     onClick={handleLogout}
-                    className="bg-red-500/20 hover:bg-red-500/40 text-red-400 hover:text-red-300 border border-red-500/30"
+                    className="bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/10"
                 >
                     Sign Out
                 </Button>
@@ -279,6 +316,18 @@ export default function ProfileSelector() {
                                 onKeyDown={e => e.key === "Enter" && handlePinSubmit()}
                             />
 
+                            <button
+                                onClick={() => setStayUnlocked(!stayUnlocked)}
+                                className="flex items-center justify-center gap-2 mb-6 w-full text-muted-foreground hover:text-white transition-colors py-2"
+                            >
+                                {stayUnlocked ? (
+                                    <CheckSquare className="w-4 h-4 text-primary" />
+                                ) : (
+                                    <Square className="w-4 h-4" />
+                                )}
+                                <span className="text-sm">Stay unlocked on this device</span>
+                            </button>
+
                             <div className="flex gap-2">
                                 <Button
                                     variant="ghost"
@@ -295,6 +344,88 @@ export default function ProfileSelector() {
                                     {isVerifyingPin ? <Loader2 className="w-4 h-4 animate-spin" /> : "Unlock"}
                                 </Button>
                             </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Manage Profile Modal */}
+            <AnimatePresence>
+                {editingProfile && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+                        onClick={() => setEditingProfile(null)}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.9, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.9, opacity: 0 }}
+                            className="glass rounded-2xl p-6 w-full max-w-sm text-center"
+                            onClick={e => e.stopPropagation()}
+                        >
+                            <div className="w-20 h-20 mx-auto mb-4 rounded-2xl bg-primary/20 flex items-center justify-center">
+                                <UserIcon className="w-10 h-10 text-primary" />
+                            </div>
+                            <h2 className="text-xl font-bold mb-1">{editingProfile.name}</h2>
+                            <p className="text-sm text-muted-foreground mb-6">Manage security and settings</p>
+
+                            <div className="space-y-3 mb-6">
+                                {editingProfile.has_pin ? (
+                                    <Button
+                                        variant="destructive"
+                                        className="w-full bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white border-none"
+                                        onClick={async () => {
+                                            try {
+                                                await removeProfilePin(editingProfile.id);
+                                                await refreshProfiles();
+                                                toast.success("PIN removed!");
+                                                setEditingProfile(null);
+                                            } catch { toast.error("Failed to remove PIN"); }
+                                        }}
+                                    >
+                                        <ShieldOff className="w-4 h-4 mr-2" />
+                                        Remove PIN protection
+                                    </Button>
+                                ) : (
+                                    <div className="space-y-2">
+                                        <Input
+                                            type="password"
+                                            placeholder="Enter 4-6 digit PIN"
+                                            value={pinInput}
+                                            onChange={e => setPinInput(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                                            className="text-center"
+                                            maxLength={6}
+                                        />
+                                        <Button
+                                            className="w-full gradient-accent"
+                                            disabled={pinInput.length < 4}
+                                            onClick={async () => {
+                                                try {
+                                                    await setProfilePin(editingProfile.id, pinInput);
+                                                    await refreshProfiles();
+                                                    toast.success("PIN set!");
+                                                    setEditingProfile(null);
+                                                    setPinInput("");
+                                                } catch { toast.error("Failed to set PIN"); }
+                                            }}
+                                        >
+                                            <Lock className="w-4 h-4 mr-2" />
+                                            Set PIN security
+                                        </Button>
+                                    </div>
+                                )}
+                            </div>
+
+                            <Button
+                                variant="ghost"
+                                className="w-full"
+                                onClick={() => setEditingProfile(null)}
+                            >
+                                Back
+                            </Button>
                         </motion.div>
                     </motion.div>
                 )}

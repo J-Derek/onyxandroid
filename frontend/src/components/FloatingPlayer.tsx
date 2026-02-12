@@ -8,6 +8,8 @@ import {
 import { Button } from './ui/button';
 import { Slider } from './ui/slider';
 import { usePlayer } from '@/contexts/PlayerContext';
+import { usePlayback } from '@/contexts/PlaybackContext';
+import { Music2 } from 'lucide-react';
 
 export function FloatingPlayer() {
     const {
@@ -33,6 +35,38 @@ export function FloatingPlayer() {
         updateDuration,
         videoRef,
     } = usePlayer();
+
+    const streaming = usePlayback();
+    const playbackContext = streaming || {};
+    const {
+        currentTrack,
+        isPlaying: isStreamingPlaying,
+        togglePlay: toggleStreamingPlay,
+        next: nextStreaming,
+        previous: previousStreaming,
+        currentTime: streamingTime,
+        duration: streamingDuration,
+        seek: seekStreaming,
+        queue = []
+    } = playbackContext;
+
+    // Unified Logic: Prioritize Downloader media, fallback to Streaming track
+    const activeMedia = currentMedia || (currentTrack ? {
+        id: currentTrack.id.toString(),
+        title: currentTrack.title,
+        artist: currentTrack.artist,
+        thumbnail: currentTrack.thumbnail,
+        src: currentTrack.uri,
+        type: 'audio' as const
+    } : null);
+
+    const isCurrentlyPlaying = currentMedia ? isPlaying : isStreamingPlaying;
+    const currentPos = currentMedia ? currentTime : (streamingTime || 0);
+    const mediaDuration = currentMedia ? duration : (streamingDuration || 0);
+
+    // Up Next logic for Streaming mode
+    const nextTrack = currentTrack && queue.length > 0 ? queue[((queue.findIndex(t => t.id === currentTrack.id) + 1) % queue.length)] : null;
+    const isShowingStreamingNext = !currentMedia && nextTrack && nextTrack.id !== currentTrack?.id;
 
     const dragControls = useDragControls();
     const containerRef = useRef<HTMLDivElement>(null);
@@ -92,7 +126,8 @@ export function FloatingPlayer() {
 
     const location = useLocation();
 
-    if (!currentMedia || location.pathname === '/party') return null;
+    // Show if either Downloader media or Streaming track is present
+    if (!activeMedia || location.pathname === '/party') return null;
 
     // When in PiP mode, show only a small indicator
     if (isPiP) {
@@ -133,8 +168,8 @@ export function FloatingPlayer() {
                     opacity: 1,
                     scale: 1,
                     y: 0,
-                    width: isMinimized ? 320 : (currentMedia.type === 'video' ? 480 : 400),
-                    height: isMinimized ? 80 : 'auto',
+                    width: isMinimized ? 340 : (activeMedia.type === 'video' ? 480 : 400),
+                    height: isMinimized ? (isShowingStreamingNext ? 100 : 80) : 'auto',
                 }}
                 exit={{ opacity: 0, scale: 0.9, y: 50 }}
                 style={{ x: position.x, y: position.y }}
@@ -149,11 +184,11 @@ export function FloatingPlayer() {
                 </div>
 
                 {/* Video Area (only for video, when not minimized) */}
-                {currentMedia.type === 'video' && !isMinimized && (
+                {activeMedia.type === 'video' && !isMinimized && (
                     <div className="relative aspect-video bg-black">
                         <video
                             ref={videoRef}
-                            src={currentMedia.src}
+                            src={activeMedia.src}
                             className="w-full h-full object-contain"
                             onClick={togglePlay}
                             onTimeUpdate={(e) => updateTime(e.currentTarget.currentTime)}
@@ -162,7 +197,7 @@ export function FloatingPlayer() {
                             playsInline
                         />
 
-                        {!isPlaying && (
+                        {!isCurrentlyPlaying && (
                             <div className="absolute inset-0 flex items-center justify-center bg-black/20">
                                 <div
                                     className="w-14 h-14 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center cursor-pointer hover:bg-white/30"
@@ -179,37 +214,50 @@ export function FloatingPlayer() {
                 <div className={`p-4 ${isMinimized ? 'flex items-center gap-3' : 'space-y-3'}`}>
                     {/* Thumbnail + Title (minimized mode) */}
                     {isMinimized && (
-                        <>
-                            {currentMedia.thumbnail ? (
-                                <img
-                                    src={currentMedia.thumbnail}
-                                    alt=""
-                                    className="w-12 h-12 rounded-lg object-cover"
-                                />
-                            ) : (
-                                <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-primary/50 to-accent/50 flex items-center justify-center">
-                                    <Volume2 className="w-5 h-5 text-white" />
+                        <div className="flex flex-col flex-1 min-w-0 gap-1">
+                            <div className="flex items-center gap-3">
+                                {activeMedia.thumbnail ? (
+                                    <img
+                                        src={activeMedia.thumbnail}
+                                        alt=""
+                                        className="w-12 h-12 rounded-lg object-cover shadow-lg border border-white/5"
+                                    />
+                                ) : (
+                                    <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-primary/50 to-accent/50 flex items-center justify-center">
+                                        <Volume2 className="w-5 h-5 text-white" />
+                                    </div>
+                                )}
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-bold text-white truncate leading-tight">{activeMedia.title}</p>
+                                    <p className="text-[10px] text-white/50">{formatTime(currentPos)} / {formatTime(mediaDuration)}</p>
+                                </div>
+                            </div>
+
+                            {/* Up Next Preview for Streamer */}
+                            {isShowingStreamingNext && (
+                                <div className="flex items-center gap-2 pl-1 top-border border-white/5 mt-1 pt-1 opacity-70">
+                                    <Music2 className="w-3 h-3 text-primary" />
+                                    <p className="text-[10px] text-white/40 font-medium truncate">
+                                        Up Next: <span className="text-white/60">{nextTrack.title}</span>
+                                    </p>
                                 </div>
                             )}
-                            <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-white truncate">{currentMedia.title}</p>
-                                <p className="text-xs text-white/50">{formatTime(currentTime)} / {formatTime(duration)}</p>
-                            </div>
-                        </>
+                        </div>
                     )}
 
                     {/* Title (expanded mode) */}
                     {!isMinimized && (
                         <div className="flex items-center gap-3">
-                            {currentMedia.type === 'audio' && currentMedia.thumbnail && (
+                            {activeMedia.type === 'audio' && activeMedia.thumbnail && (
                                 <img
-                                    src={currentMedia.thumbnail}
+                                    src={activeMedia.thumbnail}
                                     alt=""
                                     className="w-14 h-14 rounded-lg object-cover"
                                 />
                             )}
                             <div className="flex-1 min-w-0">
-                                <p className="font-medium text-white truncate">{currentMedia.title}</p>
+                                <p className="font-medium text-white truncate">{activeMedia.title}</p>
+                                {activeMedia.artist && <p className="text-xs text-white/50 truncate">{activeMedia.artist}</p>}
                             </div>
                         </div>
                     )}
@@ -217,15 +265,18 @@ export function FloatingPlayer() {
                     {/* Progress Bar (expanded mode) */}
                     {!isMinimized && (
                         <div className="flex items-center gap-2">
-                            <span className="text-xs text-white/70 w-10">{formatTime(currentTime)}</span>
+                            <span className="text-xs text-white/70 w-10">{formatTime(currentPos)}</span>
                             <Slider
-                                value={[currentTime]}
-                                max={duration || 100}
+                                value={[currentPos]}
+                                max={mediaDuration || 100}
                                 step={0.1}
-                                onValueChange={([val]) => seek(val)}
+                                onValueChange={([val]) => {
+                                    if (currentMedia) seek(val);
+                                    else seekStreaming(val);
+                                }}
                                 className="flex-1"
                             />
-                            <span className="text-xs text-white/70 w-10 text-right">{formatTime(duration)}</span>
+                            <span className="text-xs text-white/70 w-10 text-right">{formatTime(mediaDuration)}</span>
                         </div>
                     )}
 
@@ -247,17 +298,17 @@ export function FloatingPlayer() {
                             <Button
                                 variant="ghost"
                                 size="icon"
-                                onClick={togglePlay}
+                                onClick={currentMedia ? togglePlay : toggleStreamingPlay}
                                 className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white"
                             >
-                                {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 ml-0.5" />}
+                                {isCurrentlyPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 ml-0.5" />}
                             </Button>
 
-                            {!isMinimized && playlist.length > 1 && (
+                            {!isMinimized && (playlist.length > 1 || queue.length > 1) && (
                                 <Button
                                     variant="ghost"
                                     size="sm"
-                                    onClick={next}
+                                    onClick={currentMedia ? next : nextStreaming}
                                     className="text-white hover:bg-white/10"
                                     title="Next track"
                                 >
@@ -289,7 +340,7 @@ export function FloatingPlayer() {
 
                         {/* Action Buttons */}
                         <div className="flex items-center gap-1 ml-auto">
-                            {currentMedia.type === 'video' && !isMinimized && (
+                            {activeMedia.type === 'video' && !isMinimized && (
                                 <Button
                                     variant="ghost"
                                     size="sm"
