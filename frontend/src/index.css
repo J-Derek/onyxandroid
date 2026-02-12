@@ -1,0 +1,461 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Spotify Dark Theme */
+    --background: 0 0% 0%;
+    /* Pure Black for the shell */
+    --foreground: 0 0% 100%;
+
+    --card: 0 0% 7%;
+    /* #121212 - Spotify Background */
+    --card-foreground: 0 0% 100%;
+
+    --popover: 0 0% 15%;
+    --popover-foreground: 0 0% 100%;
+
+    --primary: 141 73% 42%;
+    /* #1DB954 - Spotify Green */
+    --primary-foreground: 0 0% 0%;
+
+    --secondary: 0 0% 15%;
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 0 0% 30%;
+    --muted-foreground: 0 0% 70%;
+
+    --accent: 141 73% 42%;
+    --accent-foreground: 0 0% 100%;
+
+    --success: 141 73% 42%;
+    --success-foreground: 0 0% 0%;
+
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 0%;
+
+    --destructive: 350 89% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 0 0% 10%;
+    --input: 0 0% 10%;
+    --ring: 141 73% 42%;
+
+    --radius: 0.5rem;
+
+    /* Spotify Specifics */
+    --spotify-green: #1DB954;
+    --spotify-black: #121212;
+    --spotify-card: #181818;
+    --spotify-nav: #000000;
+    --spotify-surface: #282828;
+    --spotify-grey: #b3b3b3;
+
+    /* Gradients (needed by download mode buttons/pills) */
+    --gradient-primary: linear-gradient(135deg, #1DB954 0%, #1ed760 100%);
+    --gradient-accent: linear-gradient(135deg, #1ed760 0%, #1DB954 100%);
+    --gradient-success: linear-gradient(135deg, #1DB954 0%, #14a348 100%);
+
+    /* Glass effect for dark mode */
+    --glass-bg: rgba(18, 18, 18, 0.8);
+    --glass-border: rgba(255, 255, 255, 0.08);
+
+    /* Surface levels */
+    --surface-0: 0 0% 0%;
+    --surface-1: 0 0% 7%;
+    --surface-2: 0 0% 12%;
+    --surface-3: 0 0% 18%;
+
+    --sidebar-background: 0 0% 0%;
+    --sidebar-foreground: 0 0% 70%;
+    --sidebar-primary: 141 73% 42%;
+    --sidebar-primary-foreground: 0 0% 0%;
+    --sidebar-accent: 0 0% 10%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 0 0% 10%;
+    --sidebar-ring: 141 73% 42%;
+  }
+
+  /* Spotify Slider Styles */
+  .spotify-slider .bg-primary {
+    background-color: #b3b3b3 !important;
+  }
+
+  .group:hover .spotify-slider .bg-primary {
+    background-color: var(--spotify-green) !important;
+  }
+
+  .spotify-slider [role="slider"] {
+    display: none;
+    width: 12px;
+    height: 12px;
+    background-color: white;
+    border-color: white;
+  }
+
+  .group:hover .spotify-slider [role="slider"] {
+    display: block;
+  }
+
+  .light {
+    /* Onyx Clean - Tech UI Theme */
+    /* Cool, crisp, cyber-aligned with neon logo */
+
+    --background: 210 40% 98%;
+    /* #F8FAFC - Cool slate white */
+    --foreground: 222 47% 11%;
+    /* #0F172A - Deep dark slate */
+
+    --card: 0 0% 100%;
+    /* Pure white for cards */
+    --card-foreground: 222 47% 11%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+
+    --primary: 187 94% 43%;
+    /* #06B6D4 - Electric Cyan */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 210 40% 96%;
+    /* Cool light gray */
+    --secondary-foreground: 222 47% 11%;
+
+    --muted: 215 20% 95%;
+    /* Subtle cool gray */
+    --muted-foreground: 215 16% 47%;
+    /* #64748B - Cool medium gray */
+
+    --accent: 187 94% 43%;
+    /* Electric Cyan accent */
+    --accent-foreground: 0 0% 100%;
+
+    --success: 160 84% 39%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 38 92% 50%;
+    --warning-foreground: 222 47% 11%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 214 32% 91%;
+    /* #E2E8F0 - Light gray border */
+    --input: 214 32% 91%;
+    --ring: 187 94% 43%;
+    /* Cyan ring */
+
+    /* Tech gradients - cyan focused */
+    --gradient-primary: linear-gradient(135deg, hsl(187, 94%, 43%) 0%, hsl(199, 89%, 48%) 100%);
+    --gradient-accent: linear-gradient(135deg, hsl(199, 89%, 48%) 0%, hsl(187, 94%, 43%) 100%);
+
+    /* Crisp white glass with subtle borders */
+    --glass-bg: hsl(0, 0%, 100%, 0.95);
+    --glass-border: hsl(214, 32%, 91%, 1);
+
+    /* Surface levels - white to light gray progression */
+    --surface-0: 210 40% 98%;
+    /* App background */
+    --surface-1: 0 0% 100%;
+    /* Cards - pure white */
+    --surface-2: 210 40% 96%;
+    /* Elevated surfaces */
+    --surface-3: 214 32% 91%;
+    /* Borders/dividers */
+  }
+
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    font-family: 'Inter', system-ui, sans-serif;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+  }
+
+  /* Global Custom Scrollbar Theme */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.2) rgba(0, 0, 0, 0.1);
+  }
+
+  /* Webkit Browsers (Chrome, Safari, Edge) */
+  *::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 10px;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 10px;
+    border: 2px solid transparent;
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.25);
+  }
+
+  /* Queue-specific scrollbar - more visible */
+  .queue-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .queue-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .queue-scrollbar::-webkit-scrollbar-thumb {
+    background: hsl(var(--primary) / 0.3);
+    border-radius: 10px;
+  }
+
+  .queue-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--primary) / 0.5);
+  }
+}
+
+@layer components {
+  .glass {
+    @apply backdrop-blur-xl border;
+    background: var(--glass-bg);
+    border-color: var(--glass-border);
+  }
+
+  /* Onyx Clean - Tech Card (elevated white slabs) */
+  .tech-card {
+    @apply bg-card border border-border rounded-2xl;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
+  }
+
+  .light .tech-card {
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+  }
+
+  /* Onyx Clean - Tech Input (glowing border on focus) */
+  .tech-input {
+    @apply bg-card border-2 border-border rounded-xl px-4 py-3 text-foreground;
+    transition: all 0.2s ease;
+  }
+
+  .tech-input::placeholder {
+    @apply text-muted-foreground;
+  }
+
+  .tech-input:focus {
+    @apply outline-none border-primary;
+    box-shadow: 0 0 0 4px hsl(var(--primary) / 0.2);
+  }
+
+  /* Onyx Clean - Tech Button (solid with hover) */
+  .tech-button {
+    @apply bg-primary text-primary-foreground font-semibold rounded-xl px-6 py-3;
+    transition: all 0.2s ease;
+  }
+
+  .tech-button:hover {
+    filter: brightness(0.9);
+    transform: translateY(-1px);
+  }
+
+
+  .gradient-primary {
+    background: var(--gradient-primary);
+  }
+
+  .gradient-accent {
+    background: var(--gradient-accent);
+  }
+
+  .gradient-success {
+    background: var(--gradient-success);
+  }
+
+  .gradient-text {
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .glow-primary {
+    box-shadow: 0 0 40px hsl(263, 70%, 50%, 0.4),
+      0 0 80px hsl(217, 91%, 60%, 0.2);
+  }
+
+  .glow-accent {
+    box-shadow: 0 0 30px hsl(188, 94%, 43%, 0.4);
+  }
+
+  .hover-lift {
+    @apply transition-all duration-300;
+  }
+
+  .hover-lift:hover {
+    @apply -translate-y-1;
+    box-shadow: 0 20px 40px -15px hsl(var(--primary) / 0.3);
+  }
+
+  .input-glow:focus {
+    box-shadow: 0 0 0 3px hsl(var(--primary) / 0.2),
+      0 0 20px hsl(var(--primary) / 0.15);
+  }
+
+  .tab-underline {
+    @apply relative;
+  }
+
+  .tab-underline::after {
+    content: '';
+    @apply absolute bottom-0 left-0 w-full h-0.5 scale-x-0 transition-transform duration-300 origin-left;
+    background: var(--gradient-primary);
+  }
+
+  .tab-underline.active::after,
+  .tab-underline:hover::after {
+    @apply scale-x-100;
+  }
+
+  .progress-gradient {
+    background: var(--gradient-primary);
+    background-size: 200% 100%;
+    animation: shimmer 2s linear infinite;
+  }
+
+  @keyframes shimmer {
+    0% {
+      background-position: 200% 0;
+    }
+
+    100% {
+      background-position: -200% 0;
+    }
+  }
+
+  .skeleton {
+    @apply relative overflow-hidden bg-surface-2;
+  }
+
+  .skeleton::after {
+    content: '';
+    @apply absolute inset-0;
+    background: linear-gradient(90deg, transparent, hsl(var(--surface-3) / 0.5), transparent);
+    animation: skeleton-loading 1.5s infinite;
+  }
+
+  @keyframes skeleton-loading {
+    0% {
+      transform: translateX(-100%);
+    }
+
+    100% {
+      transform: translateX(100%);
+    }
+  }
+
+  .card-shine {
+    @apply relative overflow-hidden;
+  }
+
+  .card-shine::before {
+    content: '';
+    @apply absolute inset-0 opacity-0 transition-opacity duration-500;
+    background: linear-gradient(105deg, transparent 40%, hsl(var(--primary) / 0.1) 45%, hsl(var(--primary) / 0.2) 50%, hsl(var(--primary) / 0.1) 55%, transparent 60%);
+  }
+
+  .card-shine:hover::before {
+    @apply opacity-100;
+    animation: card-shine 0.8s ease-out;
+  }
+
+  @keyframes card-shine {
+    0% {
+      transform: translateX(-100%);
+    }
+
+    100% {
+      transform: translateX(100%);
+    }
+  }
+}
+
+@layer utilities {
+  .bg-surface-0 {
+    background-color: hsl(var(--surface-0));
+  }
+
+  .bg-surface-1 {
+    background-color: hsl(var(--surface-1));
+  }
+
+  .bg-surface-2 {
+    background-color: hsl(var(--surface-2));
+  }
+
+  .bg-surface-3 {
+    background-color: hsl(var(--surface-3));
+  }
+
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@layer utilities {
+  .icy-bg {
+    background: radial-gradient(circle at top right, rgba(6, 182, 212, 0.1) 0%, transparent 40%),
+      radial-gradient(circle at bottom left, rgba(59, 130, 246, 0.05) 0%, transparent 40%),
+      hsl(var(--background)) !important;
+  }
+
+  .frost-effect {
+    backdrop-filter: blur(16px) saturate(180%) !important;
+    background: rgba(255, 255, 255, 0.03) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .frost-effect::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.05), transparent);
+    animation: shimmer 8s infinite;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+
+  100% {
+    transform: translateX(100%);
+  }
+}
