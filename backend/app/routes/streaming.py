@@ -176,8 +176,27 @@ async def _proxy_stream(stream_url: str, request_range: Optional[str] = None, kn
             stream=True
         )
         
-        # Extract exact headers from YouTube to forward to the browser
+        # Capture the actual status code from YouTube
         status_code = response.status_code
+        
+        # If YouTube returns an error (403, 404, etc.), log it and fail early
+        if status_code >= 400:
+            error_body = await response.aread()
+            error_msg = error_body.decode(errors="ignore")[:500]
+            print(f"❌ [PROXY] Upstream error {status_code} for {stream_url[:50]}")
+            print(f"        Response: {error_msg}")
+            
+            # Close resources since we aren't streaming
+            await response.aclose()
+            await client.aclose()
+            
+            detail = f"Upstream {status_code} from YouTube"
+            if status_code == 403:
+                detail += ". This likely means the streaming IP does not match the extraction IP (IP-Locking)."
+            
+            raise HTTPException(status_code=status_code, detail=detail)
+
+        # Extract exact headers from YouTube to forward to the browser
         
         # We MUST forward these headers exactly for range-based media to work
         PASSTHROUGH_HEADERS = [
