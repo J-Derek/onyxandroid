@@ -1,23 +1,41 @@
 import type { VideoCard, Suggestion, DownloadTask } from "@/types";
 
 const API_BASE = "/api";
+const GLOBAL_TIMEOUT_MS = 60000;
 
 async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
-    const response = await fetch(url, options);
-    if (!response.ok) {
-        let errorData;
-        try {
-            errorData = await response.json();
-        } catch {
-            // ignore
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), GLOBAL_TIMEOUT_MS);
+
+    try {
+        const response = await fetch(url, {
+            ...options,
+            signal: options?.signal || controller.signal,
+        });
+
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+            let errorData;
+            try {
+                errorData = await response.json();
+            } catch {
+                // ignore
+            }
+            let message = errorData?.detail || errorData?.message || response.statusText;
+            if (typeof message === 'object') {
+                message = JSON.stringify(message);
+            }
+            throw new Error(message);
         }
-        let message = errorData?.detail || errorData?.message || response.statusText;
-        if (typeof message === 'object') {
-            message = JSON.stringify(message);
+        return response.json();
+    } catch (error) {
+        clearTimeout(timeoutId);
+        if (error instanceof Error && error.name === 'AbortError') {
+            throw new Error("Connection timeout. The server took too long to respond. Please try again.");
         }
-        throw new Error(message);
+        throw error;
     }
-    return response.json();
 }
 
 export const api = {

@@ -55,6 +55,10 @@ class Settings(BaseModel):
         default=True,
         description="Enable debug logging.",
     )
+    proxy_url: Optional[str] = Field(
+        default=os.getenv("YTDL_PROXY_URL"),
+        description="Optional proxy URL (e.g., http://user:pass@proxy:port) for yt-dlp.",
+    )
 
 
 settings = Settings()

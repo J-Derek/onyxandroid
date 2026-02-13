@@ -26,6 +26,12 @@ _cookie_state = {
 COOKIE_FILE_TTL = timedelta(hours=4)  # Re-extract every 4 hours
 
 # Optimized extraction options for SPEED
+def get_yt_dlp_proxy_opt() -> Dict[str, Any]:
+    """Returns proxy option if configured in settings."""
+    if settings.proxy_url:
+        return {"proxy": settings.proxy_url}
+    return {}
+
 FAST_EXTRACT_OPTS = {
     "quiet": True,
     "no_warnings": True,
@@ -36,8 +42,6 @@ FAST_EXTRACT_OPTS = {
     "no_check_certificate": True,
     "prefer_insecure": True,
     "geo_bypass": True,
-    # Request best audio - we'll manually select progressive format in select_progressive_audio()
-    # Do NOT use restrictive format strings here - they are advisory only
     "format": "bestaudio/best",
 }
 
@@ -128,18 +132,16 @@ def extract_cookies_to_file() -> Optional[str]:
 
 def get_yt_dlp_cookie_opts() -> Dict[str, Any]:
     """
-    Returns yt-dlp options using the PRE-EXTRACTED cookie file.
-    This is O(1) - just returns a file path reference.
+    Returns yt-dlp options using the PRE-EXTRACTED cookie file and proxy.
+    This is O(1) - just returns a file path reference and proxy.
     """
+    opts = get_yt_dlp_proxy_opt()
+    
     # If we have a valid cookie file, use it
     if is_cookie_file_valid() and _cookie_state["file_path"]:
-        return {
-            "cookiefile": _cookie_state["file_path"],
-        }
+        opts["cookiefile"] = _cookie_state["file_path"]
     
-    # No valid cookie file - return empty (will be slow, but won't crash)
-    # The caller should have called extract_cookies_to_file() at startup
-    return {}
+    return opts
 
 
 def get_cached_browser() -> Optional[str]:
@@ -158,6 +160,10 @@ def run_yt_dlp_with_fallback(opts: Dict[str, Any], url: str, download: bool = Fa
         # Remove any browser cookie options, use file instead
         current_opts.pop("cookiesfrombrowser", None)
         current_opts["cookiefile"] = _cookie_state["file_path"]
+        
+        # Inject proxy if available
+        if settings.proxy_url:
+            current_opts["proxy"] = settings.proxy_url
         
         try:
             with yt_dlp.YoutubeDL(current_opts) as ydl:
@@ -182,6 +188,10 @@ def run_yt_dlp_with_fallback(opts: Dict[str, Any], url: str, download: bool = Fa
         try:
             current_opts = dict(opts)
             current_opts["cookiesfrombrowser"] = (browser, None, None, None)
+            
+            # Inject proxy if available
+            if settings.proxy_url:
+                current_opts["proxy"] = settings.proxy_url
             
             with yt_dlp.YoutubeDL(current_opts) as ydl:
                 if download:

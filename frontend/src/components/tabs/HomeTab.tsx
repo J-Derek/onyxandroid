@@ -385,16 +385,18 @@ export function HomeTab({
         folderName
       );
 
-      for (const task_id of response.task_ids) {
+      response.task_ids.forEach((task_id, index) => {
         const newTask: DownloadTask = {
           id: task_id,
           status: "starting",
           percent: 0,
-          title: playlistData?.title || "Playlist Video",
+          title: videos[index].title || "Playlist Video",
+          thumbnail: videos[index].thumbnail,
           filename: `downloading...`,
+          url: urls[index],
         };
         onStartDownload(newTask);
-      }
+      });
 
       toast.success(`Started downloading ${response.task_ids.length} videos!`);
       setPlaylistData(null);

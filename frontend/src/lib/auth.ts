@@ -5,13 +5,16 @@
 
 const API_BASE = import.meta.env.VITE_API_URL || "";
 
-// Request timeout in milliseconds
-const REQUEST_TIMEOUT_MS = 10000;
+// Request timeout in milliseconds (increased to 60s for Render cold starts)
+const REQUEST_TIMEOUT_MS = 60000;
 
 // Helper for fetch with timeout
 async function fetchWithTimeout(url: string, options: RequestInit = {}): Promise<Response> {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    const timeoutId = setTimeout(() => {
+        console.warn(`[Auth] Request to ${url} timed out after ${REQUEST_TIMEOUT_MS}ms`);
+        controller.abort();
+    }, REQUEST_TIMEOUT_MS);
 
     try {
         console.log(`[Auth] Fetching: ${url}`);
@@ -24,10 +27,13 @@ async function fetchWithTimeout(url: string, options: RequestInit = {}): Promise
         return response;
     } catch (error) {
         clearTimeout(timeoutId);
-        console.error(`[Auth] Error fetching ${url}:`, error);
+
         if (error instanceof Error && error.name === 'AbortError') {
-            throw new Error("Connection timeout. The server took too long to respond.");
+            console.error(`[Auth] AbortError (Timeout) for ${url}`);
+            throw new Error("Connection timeout. The server took too long to respond. This usually happens when the server is waking up (cold start). Please try again in a few seconds.");
         }
+
+        console.error(`[Auth] Error fetching ${url}:`, error);
         throw error;
     }
 }

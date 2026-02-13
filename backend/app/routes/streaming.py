@@ -156,7 +156,12 @@ async def _proxy_stream(stream_url: str, request_range: Optional[str] = None, kn
         req_headers["Range"] = request_range
 
     # Use a longer timeout for the initial connection
-    client = httpx.AsyncClient(timeout=httpx.Timeout(120.0, connect=15.0))
+    # Use proxy if configured
+    proxies = settings.proxy_url if settings.proxy_url else None
+    client = httpx.AsyncClient(
+        proxies=proxies,
+        timeout=httpx.Timeout(120.0, connect=15.0)
+    )
     
     try:
         # Start the streaming request to YouTube

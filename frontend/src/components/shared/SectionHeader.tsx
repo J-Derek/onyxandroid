@@ -25,7 +25,7 @@ export function SectionHeader({ title, gradientWord, subtitle, className }: Sect
                 )}
             </h2>
             {subtitle && (
-                <p className="text-muted-foreground mt-2 text-sm md:text-base max-w-2xl">
+                <p className="text-muted-foreground mt-2 text-sm md:text-base max-w-2xl mx-auto">
                     {subtitle}
                 </p>
             )}

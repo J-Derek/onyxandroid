@@ -184,7 +184,15 @@ export default function ProfileSelector() {
                         transition={{ delay: 0.1 * profiles.length }}
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
-                        onClick={() => setShowCreateModal(true)}
+                        onClick={() => {
+                            if (!user) {
+                                toast.error("Account Required", {
+                                    description: "Please sign in to create and manage profiles.",
+                                });
+                                return;
+                            }
+                            setShowCreateModal(true);
+                        }}
                         className="flex flex-col items-center gap-3 group"
                     >
                         <div className="w-24 h-24 rounded-2xl border-2 border-dashed border-white/20 flex items-center justify-center text-white/40 group-hover:border-white/40 group-hover:text-white/60 transition-all">

@@ -359,7 +359,7 @@ export function FloatingPlayer() {
                                     <Maximize className="w-4 h-4" />
                                 </Button>
                             )}
-                            {currentMedia.type === 'video' && document.pictureInPictureEnabled && !isMinimized && (
+                            {activeMedia.type === 'video' && document.pictureInPictureEnabled && !isMinimized && (
                                 <Button
                                     variant="ghost"
                                     size="sm"
