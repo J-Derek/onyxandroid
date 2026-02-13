@@ -58,13 +58,12 @@ FAST_EXTRACT_OPTS = {
     # Safety net: if even the fallback chain fails, return info dict
     # anyway so our select_progressive_audio() can pick by itag.
     "ignore_no_formats_error": True,
-    # Use Android client to bypass PO Token requirement.
-    # YouTube's web player requires a Proof of Origin token to serve
-    # audio streams from datacenter IPs. Without it, only storyboard
-    # formats are returned. Android/iOS clients don't need PO tokens.
+    # Use tv_embedded client to get actual audio stream URLs.
+    # Tested locally: android_music/android/ios/mweb return 0 audio formats.
+    # Only tv_embedded returns all 5 progressive audio formats (140, 251, etc).
     "extractor_args": {
         "youtube": {
-            "player_client": ["android_music", "android", "web"]
+            "player_client": ["tv_embedded"]
         },
         "youtubetab": {
             "skip": ["authcheck"]
