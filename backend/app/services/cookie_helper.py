@@ -56,11 +56,14 @@ FAST_EXTRACT_OPTS = {
 
 def is_cookie_file_valid() -> bool:
     """Check if the cached cookie file exists and is fresh."""
+    import sys
     # Priority 1: Check manual cookie files
     for path in MANUAL_COOKIE_PATHS:
         if path.exists() and path.stat().st_size > 0:
             _cookie_state["file_path"] = str(path)
             _cookie_state["extracted_at"] = datetime.fromtimestamp(path.stat().st_mtime)
+            print(f"🍪 [COOKIE] Found MANUAL cookie file: {path} ({path.stat().st_size} bytes)")
+            sys.stdout.flush()
             return True
 
     if not COOKIE_FILE.exists():
@@ -86,10 +89,13 @@ def extract_cookies_to_file() -> Optional[str]:
     This is the slow operation - only called at startup or when cache expires.
     Returns the path to the cookie file, or None if extraction failed.
     """
-    # Check if already valid
+    import sys
+    # Check if already valid (manual cookie file takes priority)
     if is_cookie_file_valid():
-        print(f"🍪 [COOKIE] Using cached cookie file (extracted {_cookie_state['extracted_at']})")
-        return str(COOKIE_FILE)
+        source = _cookie_state.get("file_path", "unknown") 
+        print(f"🍪 [COOKIE] Using cookie file: {source} (extracted {_cookie_state['extracted_at']})")
+        sys.stdout.flush()
+        return _cookie_state["file_path"]
     
     # Lock to prevent concurrent extractions
     if COOKIE_LOCK_FILE.exists():

@@ -23,6 +23,10 @@ RUN pip install --no-cache-dir -r backend/requirements.txt
 # Copy Backend Code
 COPY backend/ ./backend/
 
+# Copy YouTube cookies (exported from real browser for anti-bot auth)
+# If cookies.txt doesn't exist, create an empty file so COPY doesn't fail
+COPY backend/cookies.txt* ./backend/
+
 # Copy Built Frontend from Stage 1
 COPY --from=frontend-build /app/frontend/dist ./frontend/dist
 

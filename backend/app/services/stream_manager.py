@@ -18,6 +18,11 @@ import anyio
 from ..config import settings
 from .cookie_helper import get_yt_dlp_cookie_opts, FAST_EXTRACT_OPTS
 
+try:
+    from yt_dlp.utils import DownloadError
+except ImportError:
+    DownloadError = Exception
+
 
 @dataclass(order=True)
 class ExtractionTask:
@@ -339,6 +344,17 @@ class StreamManager:
             if not task.future.done():
                 task.future.set_result(cached)
                 
+        except DownloadError as e:
+            err_msg = str(e)
+            if "Sign in" in err_msg or "not a bot" in err_msg:
+                print(f"🤖 [EXTRACT] YouTube BOT DETECTION for {video_id}!")
+                print(f"   → Your cookies.txt is missing, expired, or invalid.")
+                print(f"   → Re-export cookies from a logged-in browser.")
+            else:
+                print(f"❌ [EXTRACT] yt-dlp DownloadError for {video_id}: {err_msg[:200]}")
+            import sys; sys.stdout.flush()
+            if not task.future.done():
+                task.future.set_exception(e)
         except Exception as e:
             print(f"❌ [EXTRACT] Failed for {video_id}: {e}")
             if not task.future.done():
@@ -459,6 +475,15 @@ class StreamManager:
                 
             except asyncio.TimeoutError:
                 raise TimeoutError(f"Urgent extraction for {video_id} timed out after {timeout}s")
+            except DownloadError as e:
+                err_msg = str(e)
+                if "Sign in" in err_msg or "not a bot" in err_msg:
+                    import sys
+                    print(f"🤖 [URGENT] YouTube BOT DETECTION for {video_id}!")
+                    print(f"   → Your cookies.txt is missing, expired, or invalid.")
+                    print(f"   → Re-export cookies from a logged-in browser.")
+                    sys.stdout.flush()
+                raise
 
     async def prefetch(self, video_id: str, priority: int = 3) -> bool:
         """

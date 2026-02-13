@@ -144,11 +144,10 @@ class YTDLClient:
             # YouTube Suggest API (used by search bar)
             url = f"http://suggestqueries.google.com/complete/search?client=youtube&ds=yt&q={query}"
             
-            # Using proxies if available to avoid rate limiting
+            # Using proxy if available to avoid rate limiting
             proxy = settings.proxy_url if hasattr(settings, 'proxy_url') else None
-            proxies = {"http://": proxy, "https://": proxy} if proxy else None
             
-            with httpx.Client(proxies=proxies, timeout=3.0) as client:
+            with httpx.Client(proxy=proxy, timeout=3.0) as client:
                 response = client.get(url)
                 
                 if response.status_code == 200:
