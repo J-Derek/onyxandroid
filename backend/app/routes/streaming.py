@@ -217,9 +217,10 @@ async def _ytdlp_pipe_stream(video_id: str):
         print(f"⚠️ [PIPE] Format listing failed: {e}")
         sys.stdout.flush()
     
-    # Diagnostic: Print yt-dlp version right before execution
+    # Diagnostic: Print yt-dlp version and proxy status
     import yt_dlp
     print(f"📦 [PIPE] yt-dlp version: {yt_dlp.version.__version__}")
+    print(f"📦 [PIPE] Proxy active: {bool(settings.proxy_url)}")
     print(f"📦 [PIPE] Executable path: {sys.executable}")
     sys.stdout.flush()
 
@@ -235,11 +236,28 @@ async def _ytdlp_pipe_stream(video_id: str):
             "use_cookies": True,
         },
         {
+            "name": "tv_embedded + ipv4 + no cookies",
+            "args": [
+                "--extractor-args", "youtube:player_client=tv_embedded",
+                "--force-ipv4",
+                "--user-agent", "Mozilla/5.0 (PlayStation; PlayStation 5/8.20) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15",
+            ],
+            "use_cookies": False,
+        },
+        {
             "name": "android + ipv4 + cookies",
             "args": [
                 "--extractor-args", "youtube:player_client=android",
                 "--force-ipv4",
                 "--user-agent", "com.google.android.youtube/19.29.37 (Linux; U; Android 14; en_US) gzip",
+            ],
+            "use_cookies": True,
+        },
+        {
+            "name": "web + ipv4 + cookies",
+            "args": [
+                "--extractor-args", "youtube:player_client=web",
+                "--force-ipv4",
             ],
             "use_cookies": True,
         },
