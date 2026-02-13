@@ -8,6 +8,7 @@ import { Search, Play, ListPlus, Loader2, Music, User, Clock, WifiOff, History, 
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { usePlayback, Track } from "@/contexts/PlaybackContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
 import AddToPlaylistModal from "../playlists/AddToPlaylistModal";
@@ -37,10 +38,15 @@ export default function SearchView() {
     const [results, setResults] = useState<SearchResult[]>([]);
     const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
     const [isLoading, setIsLoading] = useState(false);
+    const [isSuggestionsLoading, setIsSuggestionsLoading] = useState(false);
     const [showSuggestions, setShowSuggestions] = useState(false);
     const { playTrack, addToQueue, isOfflineMode } = usePlayback();
+    const { activeProfile } = useAuth();
     const suggestionsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const searchInputRef = useRef<HTMLInputElement>(null);
+
+    // Profile-scoped storage key
+    const RECENT_SEARCHES_KEY = activeProfile ? `onyx_recent_searches_${activeProfile.id}` : "onyx_recent_searches_guest";
 
     const handleAddToPlaylist = async (result: SearchResult) => {
         try {
@@ -90,20 +96,24 @@ export default function SearchView() {
 
     // Load recent searches from localStorage
     useEffect(() => {
-        const saved = localStorage.getItem("onyx_recent_searches");
+        const saved = localStorage.getItem(RECENT_SEARCHES_KEY);
         if (saved) {
             try {
                 setRecentSearches(JSON.parse(saved).slice(0, 11));
-            } catch { }
+            } catch {
+                setRecentSearches([]);
+            }
+        } else {
+            setRecentSearches([]);
         }
-    }, []);
+    }, [RECENT_SEARCHES_KEY]);
 
     // Save search to recent
     const saveRecentSearch = (q: string) => {
         if (!q.trim()) return;
         const updated = [q, ...recentSearches.filter(s => s !== q)].slice(0, 11);
         setRecentSearches(updated);
-        localStorage.setItem("onyx_recent_searches", JSON.stringify(updated));
+        localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(updated));
     };
 
     const handleSearchFocus = () => {
@@ -128,6 +138,7 @@ export default function SearchView() {
         }
 
         suggestionsTimeoutRef.current = setTimeout(async () => {
+            setIsSuggestionsLoading(true);
             try {
                 const res = await fetch(`${API_BASE}/api/suggestions`, {
                     method: "POST",
@@ -148,6 +159,8 @@ export default function SearchView() {
                 }
             } catch (error) {
                 console.error("Suggestions failed:", error);
+            } finally {
+                setIsSuggestionsLoading(false);
             }
         }, 300); // Debounce 300ms
 
@@ -240,7 +253,7 @@ export default function SearchView() {
     const removeRecentSearch = (q: string) => {
         const updated = recentSearches.filter(s => s !== q);
         setRecentSearches(updated);
-        localStorage.setItem("onyx_recent_searches", JSON.stringify(updated));
+        localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(updated));
     };
 
     const handleFormSubmit = (e: React.FormEvent) => {
@@ -299,8 +312,10 @@ export default function SearchView() {
                         placeholder="What do you want to listen to?"
                         className="w-full pl-10 pr-4 py-3 rounded-full bg-white/10 hover:bg-white/15 border-none text-white text-sm font-medium placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-white/20 transition-all font-sans"
                     />
-                    {isLoading && (
-                        <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                    {/* Main Search Spinner or Suggestions Spinner */}
+                    {(isLoading || (isSuggestionsLoading && query.trim().length > 0)) && (
+                        <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                            {isSuggestionsLoading && !isLoading && <span className="text-[10px] text-muted-foreground animate-pulse">Searching...</span>}
                             <Loader2 className="w-5 h-5 text-primary animate-spin" />
                         </div>
                     )}

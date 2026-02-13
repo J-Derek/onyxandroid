@@ -133,13 +133,57 @@ class YTDLClient:
 
 
     def get_suggestions(self, query: str) -> List[Dict[str, Any]]:
+        """
+        Get search suggestions INSTANTLY using YouTube's autocomplete API.
+        This is much faster than running yt-dlp for suggestions.
+        """
+        import httpx
+        import json
+        
+        try:
+            # YouTube Suggest API (used by search bar)
+            url = f"http://suggestqueries.google.com/complete/search?client=youtube&ds=yt&q={query}"
+            
+            # Using proxies if available to avoid rate limiting
+            proxy = settings.proxy_url if hasattr(settings, 'proxy_url') else None
+            proxies = {"http://": proxy, "https://": proxy} if proxy else None
+            
+            with httpx.Client(proxies=proxies, timeout=3.0) as client:
+                response = client.get(url)
+                
+                if response.status_code == 200:
+                    # Format is: window.google.ac.h(["query",[["sug1",0],["sug2",0]]])
+                    # Or sometimes just a raw list depending on client param
+                    text = response.text
+                    start = text.find("(")
+                    end = text.rfind(")")
+                    if start != -1 and end != -1:
+                        data = json.loads(text[start+1:end])
+                        suggestions_list = data[1]
+                        
+                        results = []
+                        for sug in suggestions_list:
+                            if isinstance(sug, list) and len(sug) > 0:
+                                results.append({"title": sug[0]})
+                            elif isinstance(sug, str):
+                                results.append({"title": sug})
+                        
+                        return results[:10]
+            
+            # Fallback to search-based suggestions if autocomplete fails
+            return self._get_suggestions_fallback(query)
+            
+        except Exception as e:
+            print(f"Suggestions fetch failed: {e}")
+            return self._get_suggestions_fallback(query)
+
+    def _get_suggestions_fallback(self, query: str) -> List[Dict[str, Any]]:
+        """Standard search fallback for suggestions."""
         search_query = self._build_search_query(query)
         opts = dict(self.base_opts)
-        # Use extract_flat for maximum speed, only get top 10
         opts.update({"extract_flat": True, "playlistend": 10})
         
         try:
-            # Quick suggestion search usually doesn't need full info
             info = run_yt_dlp_with_fallback(opts, f"ytsearch10:{search_query}", download=False)
             entries = info.get("entries", [])
             
@@ -149,21 +193,16 @@ class YTDLClient:
                 video_id = entry.get("id")
                 if not video_id: continue
                 
-                # Fast mapping without heavy scoring if performance is the bottleneck
-                suggestions.append(
-                    {
-                        "title": entry.get("title", ""),
-                        "uploader": entry.get("uploader", "Unknown"),
-                        "url": f"https://www.youtube.com/watch?v={video_id}",
-                        "thumbnail": entry.get("thumbnail")
-                        or f"https://i.ytimg.com/vi/{video_id}/mqdefault.jpg",
-                        "duration": format_duration(entry.get("duration")),
-                        "id": video_id
-                    }
-                )
+                suggestions.append({
+                    "title": entry.get("title", ""),
+                    "uploader": entry.get("uploader", "Unknown"),
+                    "url": f"https://www.youtube.com/watch?v={video_id}",
+                    "thumbnail": entry.get("thumbnail") or f"https://i.ytimg.com/vi/{video_id}/mqdefault.jpg",
+                    "duration": format_duration(entry.get("duration")),
+                    "id": video_id
+                })
             return suggestions
-        except Exception as e:
-            print(f"Suggestions fetch failed: {e}")
+        except Exception:
             return []
 
     def get_playlist(self, url: str, limit: int) -> Dict[str, Any]:

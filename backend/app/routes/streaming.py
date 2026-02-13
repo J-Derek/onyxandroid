@@ -139,7 +139,13 @@ async def stream_youtube(video_id: str, range: Optional[str] = Header(None)):
             detail="Stream authorization timed out. Please try again."
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        import traceback
+        print(f"❌ [STREAM] Critical error for {video_id}: {str(e)}")
+        print(traceback.format_exc())
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Streaming failed for {video_id}: {str(e)}. Check backend logs for full traceback."
+        )
 
 
 async def _proxy_stream(stream_url: str, request_range: Optional[str] = None, known_content_type: str = "audio/mp4"):
