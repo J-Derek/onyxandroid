@@ -17,6 +17,14 @@ BROWSERS = ["brave", "chrome", "edge", "firefox", "opera", "vivaldi", "safari"]
 COOKIE_FILE = Path(tempfile.gettempdir()) / "onyx_youtube_cookies.txt"
 COOKIE_LOCK_FILE = Path(tempfile.gettempdir()) / "onyx_cookie_lock"
 
+# Manual cookie locations (checked first)
+MANUAL_COOKIE_PATHS = [
+    Path("cookies.txt"),
+    Path("/app/backend/cookies.txt"),
+    Path("/app/backend/data/cookies.txt"),
+    Path("onyx_cookies.txt"),
+]
+
 # In-memory state
 _cookie_state = {
     "file_path": None,
@@ -48,6 +56,13 @@ FAST_EXTRACT_OPTS = {
 
 def is_cookie_file_valid() -> bool:
     """Check if the cached cookie file exists and is fresh."""
+    # Priority 1: Check manual cookie files
+    for path in MANUAL_COOKIE_PATHS:
+        if path.exists() and path.stat().st_size > 0:
+            _cookie_state["file_path"] = str(path)
+            _cookie_state["extracted_at"] = datetime.fromtimestamp(path.stat().st_mtime)
+            return True
+
     if not COOKIE_FILE.exists():
         return False
     
