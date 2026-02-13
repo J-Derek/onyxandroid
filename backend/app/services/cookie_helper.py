@@ -58,8 +58,14 @@ FAST_EXTRACT_OPTS = {
     # Safety net: if even the fallback chain fails, return info dict
     # anyway so our select_progressive_audio() can pick by itag.
     "ignore_no_formats_error": True,
-    # Skip auth verification for YouTube Mix playlists
+    # Use Android client to bypass PO Token requirement.
+    # YouTube's web player requires a Proof of Origin token to serve
+    # audio streams from datacenter IPs. Without it, only storyboard
+    # formats are returned. Android/iOS clients don't need PO tokens.
     "extractor_args": {
+        "youtube": {
+            "player_client": ["android_music", "android", "web"]
+        },
         "youtubetab": {
             "skip": ["authcheck"]
         }
