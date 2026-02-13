@@ -21,7 +21,7 @@ import httpx
 from app.database import get_db
 from app.models.library import LibraryTrack
 from app.config import settings
-from app.services.cookie_helper import run_yt_dlp_with_fallback, get_yt_dlp_cookie_opts
+from app.services.cookie_helper import run_yt_dlp_with_fallback, get_yt_dlp_cookie_opts, FAST_EXTRACT_OPTS
 from app.services.stream_manager import stream_manager
 
 router = APIRouter(prefix="/api/streaming", tags=["Streaming"])
@@ -559,11 +559,11 @@ async def get_related_videos(video_id: str, limit: int = 25):
         print(f"[Cache MISS] Fetching related tracks for {video_id}...")
         sys.stdout.flush()
 
-        ydl_opts = {
-            "quiet": True,
-            "no_warnings": True,
+        # Use FAST_EXTRACT_OPTS as the base for consistency (extractor_args, etc.)
+        ydl_opts = FAST_EXTRACT_OPTS.copy()
+        ydl_opts.update({
             "extract_flat": "in_playlist",
-        }
+        })
         ydl_opts.update(get_yt_dlp_cookie_opts())
 
         related = []
@@ -595,7 +595,7 @@ async def get_related_videos(video_id: str, limit: int = 25):
         # Method 2: Genre-based searches for diversity
         if len(related) < limit:
             try:
-                info_opts = {"quiet": True, "no_warnings": True}
+                info_opts = FAST_EXTRACT_OPTS.copy()
                 info_opts.update(get_yt_dlp_cookie_opts())
 
                 url = f"https://www.youtube.com/watch?v={video_id}"
