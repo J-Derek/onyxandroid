@@ -144,9 +144,10 @@ async def stream_youtube(video_id: str, range: Optional[str] = Header(None)):
         import traceback
         print(f"❌ [STREAM] Critical error for {video_id}: {str(e)}")
         print(traceback.format_exc())
+        sys.stdout.flush()
         raise HTTPException(
-            status_code=500, 
-            detail=f"Streaming failed for {video_id}: {str(e)}. Check backend logs for full traceback."
+            status_code=502, 
+            detail=f"Upstream extraction failed for {video_id}: {str(e)}"
         )
 
 
@@ -314,7 +315,11 @@ async def get_youtube_info(video_id: str):
             "duration": info.get("duration"),
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to fetch info: {str(e)}")
+        import traceback
+        print(f"❌ [INFO] Failed to fetch info for {video_id}: {str(e)}")
+        print(traceback.format_exc())
+        sys.stdout.flush()
+        raise HTTPException(status_code=502, detail=f"Upstream info fetch failed: {str(e)}")
 
 
 @router.get("/youtube/{video_id}/related")
@@ -324,121 +329,136 @@ async def get_related_videos(video_id: str, limit: int = 25):
     Uses YouTube Mix playlist (like YouTube's "Up Next") for diverse recommendations.
     🚀 OPTIMIZED: Uses 6-hour in-memory cache to avoid repeated YouTube calls.
     """
-    # 🚀 CHECK CACHE FIRST (instant return!)
-    if video_id in _recommendation_cache:
-        cached = _recommendation_cache[video_id]
-        if cached.is_valid():
-            print(f"[Cache HIT] Returning {len(cached.tracks)} cached tracks for {video_id}")
-            return cached.tracks[:limit]
-        else:
-            # Cache expired, remove it
-            del _recommendation_cache[video_id]
-    
-    print(f"[Cache MISS] Fetching related tracks for {video_id}...")
-    
-    ydl_opts = {
-        "quiet": True,
-        "no_warnings": True,
-        "extract_flat": "in_playlist",
-    }
-    ydl_opts.update(get_yt_dlp_cookie_opts())
-    
-    related = []
-    
-    # Method 1: Try to get YouTube's Mix playlist (RD = Radio/Mix)
-    mix_url = f"https://www.youtube.com/watch?v={video_id}&list=RD{video_id}"
     try:
-        mix_info = await anyio.to_thread.run_sync(
-            run_yt_dlp_with_fallback, ydl_opts, mix_url, False
-        )
-        
-        if mix_info and "entries" in mix_info:
-            for entry in mix_info["entries"]:
-                if entry and entry.get("id") and entry.get("id") != video_id:
-                    if not any(r["id"] == entry["id"] for r in related):
-                        related.append({
-                            "id": entry.get("id"),
-                            "title": entry.get("title", "Unknown"),
-                            "artist": entry.get("uploader") or entry.get("channel") or "YouTube",
-                            "thumbnail_url": entry.get("thumbnail") or f"https://i.ytimg.com/vi/{entry.get('id')}/hqdefault.jpg",
-                            "duration": entry.get("duration"),
-                            "source": "youtube"
-                        })
+        # 🚀 CHECK CACHE FIRST (instant return!)
+        if video_id in _recommendation_cache:
+            cached = _recommendation_cache[video_id]
+            if cached.is_valid():
+                print(f"[Cache HIT] Returning {len(cached.tracks)} cached tracks for {video_id}")
+                return cached.tracks[:limit]
+            else:
+                # Cache expired, remove it
+                del _recommendation_cache[video_id]
+
+        print(f"[Cache MISS] Fetching related tracks for {video_id}...")
+        sys.stdout.flush()
+
+        ydl_opts = {
+            "quiet": True,
+            "no_warnings": True,
+            "extract_flat": "in_playlist",
+        }
+        ydl_opts.update(get_yt_dlp_cookie_opts())
+
+        related = []
+
+        # Method 1: Try to get YouTube's Mix playlist (RD = Radio/Mix)
+        mix_url = f"https://www.youtube.com/watch?v={video_id}&list=RD{video_id}"
+        try:
+            mix_info = await anyio.to_thread.run_sync(
+                run_yt_dlp_with_fallback, ydl_opts, mix_url, False
+            )
+
+            if mix_info and "entries" in mix_info:
+                for entry in mix_info["entries"]:
+                    if entry and entry.get("id") and entry.get("id") != video_id:
+                        if not any(r["id"] == entry["id"] for r in related):
+                            related.append({
+                                "id": entry.get("id"),
+                                "title": entry.get("title", "Unknown"),
+                                "artist": entry.get("uploader") or entry.get("channel") or "YouTube",
+                                "thumbnail_url": entry.get("thumbnail") or f"https://i.ytimg.com/vi/{entry.get('id')}/hqdefault.jpg",
+                                "duration": entry.get("duration"),
+                                "source": "youtube"
+                            })
+                        if len(related) >= limit:
+                            break
+        except Exception as e:
+            print(f"Mix playlist failed: {e}")
+
+        # Method 2: Genre-based searches for diversity
+        if len(related) < limit:
+            try:
+                info_opts = {"quiet": True, "no_warnings": True}
+                info_opts.update(get_yt_dlp_cookie_opts())
+
+                url = f"https://www.youtube.com/watch?v={video_id}"
+                info = await anyio.to_thread.run_sync(
+                    run_yt_dlp_with_fallback, info_opts, url, False
+                )
+
+                categories = info.get("categories", []) if info else []
+                search_queries = []
+
+                for cat in categories[:2]:
+                    if "music" in cat.lower():
+                        search_queries.append(f"{cat} 2024 hits")
+
+                if not search_queries:
+                    search_queries = [
+                        "dancehall music 2024",
+                        "afrobeats top hits",
+                        "reggae vibes 2024",
+                        "soca music latest"
+                    ]
+
+                search_opts = {
+                    "quiet": True,
+                    "no_warnings": True,
+                    "extract_flat": "in_playlist",
+                }
+                search_opts.update(get_yt_dlp_cookie_opts())
+
+                for query in search_queries[:2]:
                     if len(related) >= limit:
                         break
+
+                    try:
+                        needed = limit - len(related)
+                        search_results = run_yt_dlp_with_fallback(
+                            search_opts,
+                            f"ytsearch{needed}:{query}",
+                            download=False
+                        )
+                        if search_results and "entries" in search_results:
+                            for entry in search_results["entries"]:
+                                if entry and entry.get("id") and entry.get("id") != video_id:
+                                    if not any(r["id"] == entry["id"] for r in related):
+                                        related.append({
+                                            "id": entry.get("id"),
+                                            "title": entry.get("title", "Unknown"),
+                                            "artist": entry.get("uploader") or entry.get("channel") or "YouTube",
+                                            "thumbnail_url": entry.get("thumbnail") or f"https://i.ytimg.com/vi/{entry.get('id')}/hqdefault.jpg",
+                                            "duration": entry.get("duration"),
+                                            "source": "youtube"
+                                        })
+                                    if len(related) >= limit:
+                                        break
+                    except Exception:
+                        pass
+            except Exception:
+                pass
+
+        # 🚀 CACHE RESULTS for future requests (6 hour TTL)
+        if related:
+            _recommendation_cache[video_id] = CachedRecommendation(
+                tracks=related,
+                cached_at=datetime.now()
+            )
+            print(f"[Cache SAVE] Stored {len(related)} tracks for {video_id}")
+            sys.stdout.flush()
+
+        return related[:limit]
     except Exception as e:
-        print(f"Mix playlist failed: {e}")
-    
-    # Method 2: Genre-based searches for diversity
-    if len(related) < limit:
-        try:
-            info_opts = {"quiet": True, "no_warnings": True}
-            info_opts.update(get_yt_dlp_cookie_opts())
-            
-            url = f"https://www.youtube.com/watch?v={video_id}"
-            info = run_yt_dlp_with_fallback(info_opts, url, download=False)
-            
-            categories = info.get("categories", []) if info else []
-            search_queries = []
-            
-            for cat in categories[:2]:
-                if "music" in cat.lower():
-                    search_queries.append(f"{cat} 2024 hits")
-            
-            if not search_queries:
-                search_queries = [
-                    "dancehall music 2024",
-                    "afrobeats top hits",
-                    "reggae vibes 2024",
-                    "soca music latest"
-                ]
-            
-            search_opts = {
-                "quiet": True,
-                "no_warnings": True,
-                "extract_flat": "in_playlist",
-            }
-            search_opts.update(get_yt_dlp_cookie_opts())
-            
-            for query in search_queries[:2]:
-                if len(related) >= limit:
-                    break
-                    
-                try:
-                    needed = limit - len(related)
-                    search_results = run_yt_dlp_with_fallback(
-                        search_opts, 
-                        f"ytsearch{needed}:{query}", 
-                        download=False
-                    )
-                    if search_results and "entries" in search_results:
-                        for entry in search_results["entries"]:
-                            if entry and entry.get("id") and entry.get("id") != video_id:
-                                if not any(r["id"] == entry["id"] for r in related):
-                                    related.append({
-                                        "id": entry.get("id"),
-                                        "title": entry.get("title", "Unknown"),
-                                        "artist": entry.get("uploader") or entry.get("channel") or "YouTube",
-                                        "thumbnail_url": entry.get("thumbnail") or f"https://i.ytimg.com/vi/{entry.get('id')}/hqdefault.jpg",
-                                        "duration": entry.get("duration"),
-                                        "source": "youtube"
-                                    })
-                                if len(related) >= limit:
-                                    break
-                except Exception:
-                    pass
-        except Exception:
-            pass
-    
-    # 🚀 CACHE RESULTS for future requests (6 hour TTL)
-    if related:
-        _recommendation_cache[video_id] = CachedRecommendation(
-            tracks=related,
-            cached_at=datetime.now()
+        import traceback
+        print(f"❌ [RELATED] Critical error for {video_id}: {str(e)}")
+        print(traceback.format_exc())
+        sys.stdout.flush()
+        from fastapi.responses import JSONResponse
+        return JSONResponse(
+            status_code=502,
+            content={"error": f"Upstream extraction failed: {str(e)}"}
         )
-        print(f"[Cache SAVE] Stored {len(related)} tracks for {video_id}")
-    
-    return related[:limit]
 
 
 @router.get("/cache/stats")
