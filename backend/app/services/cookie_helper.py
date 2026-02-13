@@ -50,7 +50,9 @@ FAST_EXTRACT_OPTS = {
     "no_check_certificate": True,
     "prefer_insecure": True,
     "geo_bypass": True,
-    "format": "bestaudio/best",
+    # DO NOT set "format" here - we do our own itag-based selection
+    # in select_progressive_audio(). Setting "format" causes yt-dlp
+    # to reject formats before our selector can pick from them.
 }
 
 
