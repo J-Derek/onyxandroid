@@ -50,12 +50,20 @@ FAST_EXTRACT_OPTS = {
     "no_check_certificate": True,
     "prefer_insecure": True,
     "geo_bypass": True,
-    # DO NOT set "format" here - we do our own itag-based selection
-    # in select_progressive_audio(). Setting "format" causes yt-dlp
-    # to reject formats before our selector can pick from them.
-    # ignore_no_formats_error ensures yt-dlp RETURNS the info dict
-    # (with formats list) even if its own format selector fails.
+    # Resilient format fallback chain:
+    # 1. Try m4a audio (best browser compat)
+    # 2. Fall back to any best audio
+    # 3. Last resort: any best format
+    "format": "bestaudio[ext=m4a]/bestaudio/best",
+    # Safety net: if even the fallback chain fails, return info dict
+    # anyway so our select_progressive_audio() can pick by itag.
     "ignore_no_formats_error": True,
+    # Skip auth verification for YouTube Mix playlists
+    "extractor_args": {
+        "youtubetab": {
+            "skip": ["authcheck"]
+        }
+    },
 }
 
 
