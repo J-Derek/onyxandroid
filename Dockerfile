@@ -29,6 +29,10 @@ COPY --from=frontend-build /app/frontend/dist ./frontend/dist
 # Expose Port (Mostly for documentation)
 EXPOSE 8000
 
+# Set Working Directory to backend for correct module resolution
+WORKDIR /app/backend
+ENV PYTHONPATH=/app/backend
+
 # Run Application
 # Use PORT environment variable if set (Render/Fly.io) or default to 8000
-CMD ["sh", "-c", "uvicorn backend.app.main:app --host 0.0.0.0 --port ${PORT:-8000} --forwarded-allow-ips='*'"]
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --forwarded-allow-ips='*'"]
