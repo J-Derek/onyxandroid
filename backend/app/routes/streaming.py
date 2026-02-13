@@ -217,41 +217,49 @@ async def _ytdlp_pipe_stream(video_id: str):
         print(f"⚠️ [PIPE] Format listing failed: {e}")
         sys.stdout.flush()
     
+    # Diagnostic: Print yt-dlp version right before execution
+    import yt_dlp
+    print(f"📦 [PIPE] yt-dlp version: {yt_dlp.version.__version__}")
+    print(f"📦 [PIPE] Executable path: {sys.executable}")
+    sys.stdout.flush()
+
     # Step 2: Try streaming with different strategies
     strategies = [
         {
-            "name": "tv_embedded + cookies",
-            "args": ["--extractor-args", "youtube:player_client=tv_embedded"],
-            "use_cookies": True,
-        },
-        {
-            "name": "android + cookies",
-            "args": ["--extractor-args", "youtube:player_client=android"],
-            "use_cookies": True,
-        },
-        {
-            "name": "ios + cookies",
-            "args": ["--extractor-args", "youtube:player_client=ios"],
-            "use_cookies": True,
-        },
-        {
-            "name": "default + cookies",
-            "args": [],
-            "use_cookies": True,
-        },
-        {
-            "name": "no cookies (anonymous)",
-            "args": [],
-            "use_cookies": False,
-        },
-        {
-            "name": "tv_embedded + no format filter",
+            "name": "tv_embedded + ipv4 + cookies",
             "args": [
                 "--extractor-args", "youtube:player_client=tv_embedded",
-                "--ignore-no-formats-error",
+                "--force-ipv4",
+                "--user-agent", "Mozilla/5.0 (PlayStation; PlayStation 5/8.20) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15",
             ],
             "use_cookies": True,
-            "no_format": True,
+        },
+        {
+            "name": "android + ipv4 + cookies",
+            "args": [
+                "--extractor-args", "youtube:player_client=android",
+                "--force-ipv4",
+                "--user-agent", "com.google.android.youtube/19.29.37 (Linux; U; Android 14; en_US) gzip",
+            ],
+            "use_cookies": True,
+        },
+        {
+            "name": "ios + ipv4 + cookies",
+            "args": [
+                "--extractor-args", "youtube:player_client=ios",
+                "--force-ipv4",
+            ],
+            "use_cookies": True,
+        },
+        {
+            "name": "default + ipv4 + cookies",
+            "args": ["--force-ipv4"],
+            "use_cookies": True,
+        },
+        {
+            "name": "no cookies + ipv4",
+            "args": ["--force-ipv4"],
+            "use_cookies": False,
         },
     ]
     
