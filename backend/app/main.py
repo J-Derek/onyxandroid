@@ -18,10 +18,12 @@ import asyncio
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Handle startup and shutdown events"""
-    # 1. Initialize database (Must be done before starting)
+    # 1. Initialize database
     await init_db()
     
+    # 2. Log yt-dlp version for diagnostics
+    import yt_dlp
+    print(f"📦 [SYSTEM] yt-dlp version: {yt_dlp.version.__version__}")
     
     # 3. Start Persistent Stream Manager (Warms up yt-dlp)
     asyncio.create_task(stream_manager.start())

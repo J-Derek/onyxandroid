@@ -221,9 +221,22 @@ async def _ytdlp_pipe_stream(video_id: str):
     strategies = [
         {
             "name": "tv_embedded + cookies",
-            "args": [
-                "--extractor-args", "youtube:player_client=tv_embedded",
-            ],
+            "args": ["--extractor-args", "youtube:player_client=tv_embedded"],
+            "use_cookies": True,
+        },
+        {
+            "name": "android + cookies",
+            "args": ["--extractor-args", "youtube:player_client=android"],
+            "use_cookies": True,
+        },
+        {
+            "name": "ios + cookies",
+            "args": ["--extractor-args", "youtube:player_client=ios"],
+            "use_cookies": True,
+        },
+        {
+            "name": "default + cookies",
+            "args": [],
             "use_cookies": True,
         },
         {
