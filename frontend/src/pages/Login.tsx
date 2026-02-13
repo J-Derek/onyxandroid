@@ -49,7 +49,16 @@ export default function Login() {
                 navigate(returnUrl);
             }
         } catch (err) {
-            toast.error(err instanceof Error ? err.message : "Authentication failed");
+            const message = err instanceof Error ? err.message : "Authentication failed";
+
+            // Special handling for 401 on login (suggest reset/re-register)
+            if (mode === "login" && (message.toLowerCase().includes("invalid") || message.toLowerCase().includes("401"))) {
+                toast.error("Login failed. If you previously had an account, it might have been reset by the server. Try signing up again!", {
+                    duration: 6000,
+                });
+            } else {
+                toast.error(message);
+            }
         } finally {
             setIsLoading(false);
         }

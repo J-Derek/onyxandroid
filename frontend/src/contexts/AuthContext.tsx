@@ -76,9 +76,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
             setIsLoading(false);
             return true;
-        } catch (error) {
+        } catch (error: any) {
             console.error("Auth check failed:", error);
-            // Try to refresh token
+
+            // If it's a 401 (Not authenticated/Invalid token), don't even try to refresh
+            // This prevents loops when the DB was reset on Render
+            if (error.message?.includes("authenticated") || error.message?.includes("Invalid") || error.message?.includes("401")) {
+                console.log("[AuthContext] 401 detected, clearing local session");
+                apiLogout();
+                setUser(null);
+                setProfiles([]);
+                setActiveProfile(null);
+                setIsLoading(false);
+                return false;
+            }
+
+            // Try to refresh token for other failures
             try {
                 const refreshed = await refreshToken();
                 if (refreshed) {
