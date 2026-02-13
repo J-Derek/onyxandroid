@@ -40,8 +40,8 @@ class Settings(BaseModel):
     
     # Auth settings
     jwt_secret: str = Field(
-        default_factory=lambda: os.getenv("JWT_SECRET", secrets.token_hex(32)),
-        description="Secret key for JWT token signing.",
+        default_factory=lambda: os.getenv("YTDL_JWT_SECRET", "onyx_fallback_secret_keep_it_secure"),
+        description="Secret key for JWT token signing. Set 'YTDL_JWT_SECRET' in production for session persistence.",
     )
     jwt_access_token_expire_hours: int = Field(
         default=24,
