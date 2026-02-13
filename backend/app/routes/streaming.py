@@ -174,109 +174,197 @@ async def _ytdlp_pipe_stream(video_id: str):
     """
     url = f"https://www.youtube.com/watch?v={video_id}"
     
-    # Build yt-dlp command
-    cmd = [
+    # Get cookie path
+    from app.services.cookie_helper import is_cookie_file_valid, _cookie_state
+    cookie_path = None
+    if is_cookie_file_valid() and _cookie_state.get("file_path"):
+        cookie_path = str(_cookie_state["file_path"])
+    
+    # Step 1: Diagnostic - list what formats YouTube actually returns from this IP
+    diag_cmd = [
         sys.executable, "-m", "yt_dlp",
-        "--format", "bestaudio[ext=m4a]/bestaudio/best",
-        "--output", "-",  # pipe to stdout
-        "--quiet",
-        "--no-warnings",
+        "--list-formats",
         "--no-playlist",
         "--no-check-certificate",
-        "--geo-bypass",
+        "--extractor-args", "youtube:player_client=tv_embedded",
     ]
-    
-    # Add cookies if available
-    from app.services.cookie_helper import is_cookie_file_valid, _cookie_state
-    if is_cookie_file_valid() and _cookie_state.get("file_path"):
-        cmd.extend(["--cookies", str(_cookie_state["file_path"])])
-    
-    # Add proxy if configured
+    if cookie_path:
+        diag_cmd.extend(["--cookies", cookie_path])
     if settings.proxy_url:
-        cmd.extend(["--proxy", settings.proxy_url])
+        diag_cmd.extend(["--proxy", settings.proxy_url])
+    diag_cmd.append(url)
     
-    cmd.append(url)
-    
-    print(f"🎵 [PIPE] Starting yt-dlp pipe stream for {video_id}")
-    print(f"🎵 [PIPE] Command: {' '.join(cmd[:8])}... {url}")
+    print(f"🔍 [PIPE] Listing available formats for {video_id}...")
     sys.stdout.flush()
-    
     try:
-        # Start yt-dlp subprocess
-        process = await asyncio.create_subprocess_exec(
-            *cmd,
+        diag_proc = await asyncio.create_subprocess_exec(
+            *diag_cmd,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
-        
-        # Check if process started and has stdout
-        if process.stdout is None:
-            raise RuntimeError("Failed to open yt-dlp stdout pipe")
-        
-        # Read a small chunk first to verify we're getting audio data
-        first_chunk = await asyncio.wait_for(
-            process.stdout.read(8192),
-            timeout=30.0
+        diag_stdout, diag_stderr = await asyncio.wait_for(
+            diag_proc.communicate(), timeout=20.0
         )
+        diag_output = (diag_stdout or b"").decode(errors="ignore")
+        diag_errors = (diag_stderr or b"").decode(errors="ignore")
+        print(f"📋 [PIPE] Available formats for {video_id}:")
+        for line in diag_output.strip().split("\n")[-15:]:  # last 15 lines
+            print(f"  {line}")
+        if diag_errors.strip():
+            print(f"  STDERR: {diag_errors.strip()[:200]}")
+        sys.stdout.flush()
+    except Exception as e:
+        print(f"⚠️ [PIPE] Format listing failed: {e}")
+        sys.stdout.flush()
+    
+    # Step 2: Try streaming with different strategies
+    strategies = [
+        {
+            "name": "tv_embedded + cookies",
+            "args": [
+                "--extractor-args", "youtube:player_client=tv_embedded",
+            ],
+            "use_cookies": True,
+        },
+        {
+            "name": "no cookies (anonymous)",
+            "args": [],
+            "use_cookies": False,
+        },
+        {
+            "name": "tv_embedded + no format filter",
+            "args": [
+                "--extractor-args", "youtube:player_client=tv_embedded",
+                "--ignore-no-formats-error",
+            ],
+            "use_cookies": True,
+            "no_format": True,
+        },
+    ]
+    
+    last_error = "No strategies succeeded"
+    
+    for strategy in strategies:
+        cmd = [
+            sys.executable, "-m", "yt_dlp",
+            "--output", "-",  # pipe to stdout
+            "--quiet",
+            "--no-warnings",
+            "--no-playlist",
+            "--no-check-certificate",
+            "--geo-bypass",
+        ]
         
-        if not first_chunk:
-            # Process exited immediately — read stderr for error
-            stderr_data = await process.stderr.read() if process.stderr else b""
-            err_msg = stderr_data.decode(errors="ignore").strip()
-            print(f"❌ [PIPE] yt-dlp produced no output for {video_id}: {err_msg[:200]}")
-            sys.stdout.flush()
-            raise HTTPException(
-                status_code=502,
-                detail=f"yt-dlp pipe failed for {video_id}: {err_msg[:200]}"
-            )
+        # Add format only if not disabled
+        if not strategy.get("no_format"):
+            cmd.extend(["--format", "bestaudio/best"])
         
-        print(f"✅ [PIPE] First chunk received ({len(first_chunk)} bytes), streaming...")
+        # Add strategy-specific args
+        cmd.extend(strategy["args"])
+        
+        # Add cookies if strategy uses them
+        if strategy["use_cookies"] and cookie_path:
+            cmd.extend(["--cookies", cookie_path])
+        
+        # Add proxy if configured
+        if settings.proxy_url:
+            cmd.extend(["--proxy", settings.proxy_url])
+        
+        cmd.append(url)
+        
+        print(f"🎵 [PIPE] Strategy: {strategy['name']} for {video_id}")
         sys.stdout.flush()
         
-        # Determine content type from first bytes
-        content_type = "audio/mp4"  # default
-        if first_chunk[:4] == b"OggS":
-            content_type = "audio/ogg"
-        elif first_chunk[:4] == b"\x1aE\xdf\xa3":
-            content_type = "audio/webm"
-        
-        async def stream_generator():
-            """Yield audio chunks from yt-dlp subprocess."""
-            try:
-                yield first_chunk
-                while True:
-                    chunk = await process.stdout.read(65536)  # 64KB chunks
-                    if not chunk:
-                        break
-                    yield chunk
-            finally:
-                # Ensure process is cleaned up
+        try:
+            # Start yt-dlp subprocess
+            process = await asyncio.create_subprocess_exec(
+                *cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            
+            # Check if process started and has stdout
+            if process.stdout is None:
+                raise RuntimeError("Failed to open yt-dlp stdout pipe")
+            
+            # Read a small chunk first to verify we're getting audio data
+            first_chunk = await asyncio.wait_for(
+                process.stdout.read(8192),
+                timeout=30.0
+            )
+            
+            if not first_chunk:
+                # Process exited immediately — read stderr for error
+                stderr_data = await process.stderr.read() if process.stderr else b""
+                err_msg = stderr_data.decode(errors="ignore").strip()
+                print(f"❌ [PIPE] Strategy '{strategy['name']}' failed: {err_msg[:200]}")
+                sys.stdout.flush()
+                last_error = err_msg[:200]
+                # Clean up process
                 try:
                     process.kill()
                 except ProcessLookupError:
                     pass
                 await process.wait()
-        
-        return StreamingResponse(
-            stream_generator(),
-            media_type=content_type,
-            headers={
-                "Accept-Ranges": "none",  # No seeking in pipe mode
-                "Cache-Control": "no-cache",
-                "X-Stream-Mode": "pipe",
-            }
-        )
-        
-    except asyncio.TimeoutError:
-        print(f"❌ [PIPE] yt-dlp timed out for {video_id}")
-        sys.stdout.flush()
-        raise HTTPException(status_code=504, detail="yt-dlp pipe timed out")
-    except HTTPException:
-        raise
-    except Exception as e:
-        print(f"❌ [PIPE] Pipe stream error for {video_id}: {e}")
-        sys.stdout.flush()
-        raise HTTPException(status_code=502, detail=f"Pipe stream failed: {str(e)}")
+                continue  # Try next strategy
+            
+            print(f"✅ [PIPE] Strategy '{strategy['name']}' SUCCESS! First chunk: {len(first_chunk)} bytes")
+            sys.stdout.flush()
+            
+            # Determine content type from first bytes
+            content_type = "audio/mp4"  # default
+            if first_chunk[:4] == b"OggS":
+                content_type = "audio/ogg"
+            elif first_chunk[:4] == b"\x1aE\xdf\xa3":
+                content_type = "audio/webm"
+            
+            async def stream_generator():
+                """Yield audio chunks from yt-dlp subprocess."""
+                try:
+                    yield first_chunk
+                    while True:
+                        chunk = await process.stdout.read(65536)  # 64KB chunks
+                        if not chunk:
+                            break
+                        yield chunk
+                finally:
+                    # Ensure process is cleaned up
+                    try:
+                        process.kill()
+                    except ProcessLookupError:
+                        pass
+                    await process.wait()
+            
+            return StreamingResponse(
+                stream_generator(),
+                media_type=content_type,
+                headers={
+                    "Accept-Ranges": "none",  # No seeking in pipe mode
+                    "Cache-Control": "no-cache",
+                    "X-Stream-Mode": "pipe",
+                }
+            )
+            
+        except asyncio.TimeoutError:
+            print(f"⏱️ [PIPE] Strategy '{strategy['name']}' timed out")
+            sys.stdout.flush()
+            last_error = "timed out"
+            continue  # Try next strategy
+        except HTTPException:
+            raise
+        except Exception as e:
+            print(f"⚠️ [PIPE] Strategy '{strategy['name']}' error: {e}")
+            sys.stdout.flush()
+            last_error = str(e)
+            continue  # Try next strategy
+    
+    # All strategies exhausted
+    print(f"❌ [PIPE] ALL strategies failed for {video_id}: {last_error}")
+    sys.stdout.flush()
+    raise HTTPException(
+        status_code=502,
+        detail=f"All streaming strategies failed for {video_id}. YouTube may block this server's IP from serving audio. Last error: {last_error}"
+    )
 
 
 async def _proxy_stream(stream_url: str, request_range: Optional[str] = None, known_content_type: str = "audio/mp4"):
