@@ -163,9 +163,9 @@ async def _proxy_stream(stream_url: str, request_range: Optional[str] = None, kn
 
     # Use a longer timeout for the initial connection
     # Use proxy if configured
-    proxies = settings.proxy_url if settings.proxy_url else None
+    proxy = settings.proxy_url if settings.proxy_url else None
     client = httpx.AsyncClient(
-        proxies=proxies,
+        proxy=proxy,
         timeout=httpx.Timeout(120.0, connect=15.0)
     )
     
