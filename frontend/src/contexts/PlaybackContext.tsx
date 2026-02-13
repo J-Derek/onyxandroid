@@ -353,7 +353,14 @@ export function PlaybackProvider({ children }: { children: React.ReactNode }) {
                 networkState: audio.networkState,
                 readyState: audio.readyState,
             };
-            console.error("Audio Playback Error:", e, errorDetails);
+
+            // Specific detection for format errors (often caused by 500 HTML bodies accidentally loaded as audio)
+            if (audio.error?.code === 4 || audio.error?.message?.includes("Format error")) {
+                console.error("❌ [Audio] Format Error: The server returned a page or error body instead of audio.", errorDetails);
+            } else {
+                console.error("❌ [Audio] Playback Error:", e, errorDetails);
+            }
+
             setIsLoading(false);
             setCurrentTrack(prev => prev ? { ...prev, state: "error", error_message: audio.error?.message || "Failed to load audio" } : null);
         };
@@ -634,6 +641,14 @@ export function PlaybackProvider({ children }: { children: React.ReactNode }) {
             // 2. Resolve URL (Cache or Streaming Proxy)
             const localUrl = await getCachedUrl(stTrack.id);
             const targetUrl = localUrl || stTrack.uri;
+
+            // Guard against empty or origin-only URLs that cause "Empty src" bugs
+            if (!targetUrl || targetUrl === "/" || targetUrl === window.location.origin + "/") {
+                console.error("❌ [Audio] Aborting: Invalid stream URL detected:", targetUrl);
+                setIsLoading(false);
+                setCurrentTrack(prev => prev ? { ...prev, state: "error", error_message: "Invalid stream URL" } : null);
+                return;
+            }
 
             audioRef.current.src = targetUrl;
             audioRef.current.currentTime = 0;

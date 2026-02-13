@@ -9,8 +9,10 @@ from sqlalchemy import select
 from pathlib import Path
 import os
 import anyio
+import secrets
+import sys
 import asyncio
-from typing import Dict, Optional, Any
+from typing import Optional, List
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 import httpx
@@ -164,6 +166,13 @@ async def _proxy_stream(stream_url: str, request_range: Optional[str] = None, kn
     # Use a longer timeout for the initial connection
     # Use proxy if configured
     proxy = settings.proxy_url if settings.proxy_url else None
+    
+    # 🕵️‍♂️ Phase 22: Verbose Debug Logging for Proxy Issues
+    print(f"DEBUG: [STREAM] Starting request for: {stream_url[:60]}...")
+    print(f"DEBUG: [STREAM] Proxy used: {proxy}")
+    print(f"DEBUG: [STREAM] Range Header: {request_range}")
+    sys.stdout.flush()
+
     client = httpx.AsyncClient(
         proxy=proxy,
         timeout=httpx.Timeout(120.0, connect=15.0)
@@ -219,14 +228,15 @@ async def _proxy_stream(stream_url: str, request_range: Optional[str] = None, kn
             if header in response.headers:
                 resp_headers[header] = response.headers[header]
 
-        # Use our known content type (from format selection), NOT what CDN returns
-        # This is critical because we manually selected a progressive format
-        content_type = known_content_type
+        # 🕵️‍♂️ Phase 22: Dynamic Content-Type forwarding
+        # Use YouTube's content type if available, otherwise fallback to our guess
+        content_type = response.headers.get("Content-Type", known_content_type)
         
-        if settings.debug:
-            print(f"[PROXY] Streaming {status_code} with {content_type}")
-            if "Content-Range" in resp_headers:
-                print(f"        Range: {resp_headers['Content-Range']}")
+        # Log final headers for diagnosis
+        print(f"DEBUG: [STREAM] Upstream status {status_code}")
+        print(f"DEBUG: [STREAM] Content-Type: {content_type}")
+        print(f"DEBUG: [STREAM] Response Headers: {dict(resp_headers)}")
+        sys.stdout.flush()
 
         async def stream_audio():
             try:
