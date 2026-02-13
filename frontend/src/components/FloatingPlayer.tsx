@@ -168,7 +168,7 @@ export function FloatingPlayer() {
                     opacity: 1,
                     scale: 1,
                     y: 0,
-                    width: isMinimized ? 340 : (activeMedia.type === 'video' ? 480 : 400),
+                    width: isMinimized ? 340 : (activeMedia?.type === 'video' ? 480 : 400),
                     height: isMinimized ? (isShowingStreamingNext ? 100 : 80) : 'auto',
                 }}
                 exit={{ opacity: 0, scale: 0.9, y: 50 }}
@@ -184,11 +184,11 @@ export function FloatingPlayer() {
                 </div>
 
                 {/* Video Area (only for video, when not minimized) */}
-                {activeMedia.type === 'video' && !isMinimized && (
+                {activeMedia?.type === 'video' && !isMinimized && (
                     <div className="relative aspect-video bg-black">
                         <video
                             ref={videoRef}
-                            src={activeMedia.src}
+                            src={activeMedia?.src}
                             className="w-full h-full object-contain"
                             onClick={togglePlay}
                             onTimeUpdate={(e) => updateTime(e.currentTarget.currentTime)}
@@ -216,7 +216,7 @@ export function FloatingPlayer() {
                     {isMinimized && (
                         <div className="flex flex-col flex-1 min-w-0 gap-1">
                             <div className="flex items-center gap-3">
-                                {activeMedia.thumbnail ? (
+                                {activeMedia?.thumbnail ? (
                                     <img
                                         src={activeMedia.thumbnail}
                                         alt=""
@@ -228,7 +228,7 @@ export function FloatingPlayer() {
                                     </div>
                                 )}
                                 <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-bold text-white truncate leading-tight">{activeMedia.title}</p>
+                                    <p className="text-sm font-bold text-white truncate leading-tight">{activeMedia?.title}</p>
                                     <p className="text-[10px] text-white/50">{formatTime(currentPos)} / {formatTime(mediaDuration)}</p>
                                 </div>
                             </div>
@@ -238,7 +238,7 @@ export function FloatingPlayer() {
                                 <div className="flex items-center gap-2 pl-1 top-border border-white/5 mt-1 pt-1 opacity-70">
                                     <Music2 className="w-3 h-3 text-primary" />
                                     <p className="text-[10px] text-white/40 font-medium truncate">
-                                        Up Next: <span className="text-white/60">{nextTrack.title}</span>
+                                        Up Next: <span className="text-white/60">{nextTrack?.title}</span>
                                     </p>
                                 </div>
                             )}
@@ -248,7 +248,7 @@ export function FloatingPlayer() {
                     {/* Title (expanded mode) */}
                     {!isMinimized && (
                         <div className="flex items-center gap-3">
-                            {activeMedia.type === 'audio' && activeMedia.thumbnail && (
+                            {activeMedia?.type === 'audio' && activeMedia?.thumbnail && (
                                 <img
                                     src={activeMedia.thumbnail}
                                     alt=""
@@ -256,8 +256,8 @@ export function FloatingPlayer() {
                                 />
                             )}
                             <div className="flex-1 min-w-0">
-                                <p className="font-medium text-white truncate">{activeMedia.title}</p>
-                                {activeMedia.artist && <p className="text-xs text-white/50 truncate">{activeMedia.artist}</p>}
+                                <p className="font-medium text-white truncate">{activeMedia?.title}</p>
+                                {activeMedia?.artist && <p className="text-xs text-white/50 truncate">{activeMedia.artist}</p>}
                             </div>
                         </div>
                     )}
@@ -340,7 +340,7 @@ export function FloatingPlayer() {
 
                         {/* Action Buttons */}
                         <div className="flex items-center gap-1 ml-auto">
-                            {activeMedia.type === 'video' && !isMinimized && (
+                            {activeMedia?.type === 'video' && !isMinimized && (
                                 <Button
                                     variant="ghost"
                                     size="sm"
@@ -359,7 +359,7 @@ export function FloatingPlayer() {
                                     <Maximize className="w-4 h-4" />
                                 </Button>
                             )}
-                            {activeMedia.type === 'video' && document.pictureInPictureEnabled && !isMinimized && (
+                            {activeMedia?.type === 'video' && document.pictureInPictureEnabled && !isMinimized && (
                                 <Button
                                     variant="ghost"
                                     size="sm"
