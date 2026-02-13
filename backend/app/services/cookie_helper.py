@@ -53,6 +53,9 @@ FAST_EXTRACT_OPTS = {
     # DO NOT set "format" here - we do our own itag-based selection
     # in select_progressive_audio(). Setting "format" causes yt-dlp
     # to reject formats before our selector can pick from them.
+    # ignore_no_formats_error ensures yt-dlp RETURNS the info dict
+    # (with formats list) even if its own format selector fails.
+    "ignore_no_formats_error": True,
 }
 
 
